@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Restaurant Recommender</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --card: #171a21;
+    --accent: #ff6b4a;
+    --text: #eef0f3;
+    --muted: #9aa3af;
+    --border: #262b35;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  header {
+    padding: 40px 20px 20px;
+    text-align: center;
+  }
+  header h1 {
+    margin: 0 0 6px;
+    font-size: 28px;
+    font-weight: 700;
+  }
+  header p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .controls {
+    max-width: 480px;
+    margin: 24px auto;
+    display: flex;
+    gap: 10px;
+    padding: 0 20px;
+  }
+  .controls input {
+    flex: 1;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-size: 14px;
+  }
+  .controls button {
+    padding: 12px 20px;
+    border-radius: 8px;
+    border: none;
+    background: var(--accent);
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .controls button:hover { opacity: 0.9; }
+  .status {
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    min-height: 20px;
+  }
+  .grid {
+    max-width: 900px;
+    margin: 20px auto 60px;
+    padding: 0 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+  }
+  .card .rank {
+    display: inline-block;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .card h3 {
+    margin: 0 0 6px;
+    font-size: 17px;
+  }
+  .card .cuisine {
+    color: var(--accent);
+    font-size: 13px;
+    text-transform: capitalize;
+    margin-bottom: 14px;
+  }
+  .meter {
+    height: 6px;
+    background: #2a2f3a;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .meter-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), #ffb199);
+  }
+  .card .meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Restaurant Recommender</h1>
+  <p>Hybrid recommendations — collaborative filtering + content-based + location</p>
+  <p><a href="/admin" style="color:#ff6b4a;">View admin panel &rarr;</a></p>
+</header>
+
+<div class="controls">
+  <input id="userId" type="number" placeholder="Enter user ID (e.g. 1)" value="1">
+  <button onclick="getRecommendations()">Get Recommendations</button>
+</div>
+<div class="status" id="status"></div>
+
+<div class="grid" id="grid"></div>
+
+<script>
+async function getRecommendations() {
+  const userId = document.getElementById('userId').value;
+  const status = document.getElementById('status');
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  status.textContent = 'Loading...';
+
+  try {
+    const res = await fetch(`/recommend/${userId}?top_n=10&max_km=50`);
+    if (!res.ok) {
+      const err = await res.json();
+      status.textContent = `Error: ${err.detail || res.statusText}`;
+      return;
+    }
+    const data = await res.json();
+    status.textContent = data.length ? '' : 'No recommendations found for this user.';
+
+    data.forEach((r, i) => {
+      const pct = Math.round(r.score * 100);
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <div class="rank">#${i + 1} match</div>
+        <h3>${r.name}</h3>
+        <div class="cuisine">${r.cuisine}</div>
+        <div class="meter"><div class="meter-fill" style="width:${pct}%"></div></div>
+        <div class="meta">
+          <span>${pct}% match</span>
+          <span>${r.distance_km != null ? r.distance_km + ' km away' : ''}</span>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+  } catch (e) {
+    status.textContent = 'Could not reach the server.';
+  }
+}
+
+getRecommendations();
+</script>
+
+</body>
+</html>
